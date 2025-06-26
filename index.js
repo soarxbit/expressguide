@@ -6,6 +6,8 @@ require('dotenv').config()
 const bodyParser = require("body-parser")
 const cookieParser = require("cookie-parser")
 const server = http.createServer(app)
+const formatMessage = require("./utils/messages");
+const {userJoin, getCurrentUser} = require("./utils/activeusers");
 const io = socketio(server)
 
 
@@ -15,23 +17,23 @@ app.use(bodyParser.json())
 app.use(cookieParser())
 app.set("view engine","ejs")
 
-
-
 io.on("connection", socket =>{
-    console.log("first")
-    socket.on('joinRoom',({user, room})=>{
-        socket.emit('message',{user,room})
+    socket.on('joinRoom',({username, room})=>{
+        console.log(socket.id, username, room)
+        const user = userJoin(socket.id, username, room)
+        socket.join(user.room)
+        socket.emit('message',formatMessage('UCODEMY', user.username + " Has Joined!"))
+        socket.broadcast.to(user.room).emit('message',formatMessage(user.username, user.username + 'has joined the room!'))
     })
-
-
 })
 app.get("/",(req, res)=>{
     res.render("home/landingpage")
 })
-app.get("/chat",(req, res)=>{
-    res.render("home/chat")
+app.post("/",(req, res)=>{
+    const {email, password, room}=req.body
+    console.log(email, password, room)
+    res.render("home/chat",{email, room})
 })
-
 
 const PORT = process.env.PORT || 3000
 server.listen(PORT, ()=>{
